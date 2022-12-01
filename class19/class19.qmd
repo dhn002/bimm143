@@ -1,0 +1,370 @@
+---
+title: "Mini-Project: Investigating Pertussis Resurgence"
+author: "Duc Nguyen"
+format: pdf
+---
+
+# 1. Investigating pertussis cases by year
+
+## Is Petussis on the rise?
+
+The CDC track reported Petussis cases in US and mkae thier data available here:
+
+https://www.cdc.gov/pertussis/surv-reporting/cases-by-year.html
+
+```{r}
+cdc <- data.frame(
+                          Year = c(1922L,
+                                   1923L,1924L,1925L,1926L,1927L,1928L,
+                                   1929L,1930L,1931L,1932L,1933L,1934L,1935L,
+                                   1936L,1937L,1938L,1939L,1940L,1941L,
+                                   1942L,1943L,1944L,1945L,1946L,1947L,1948L,
+                                   1949L,1950L,1951L,1952L,1953L,1954L,
+                                   1955L,1956L,1957L,1958L,1959L,1960L,
+                                   1961L,1962L,1963L,1964L,1965L,1966L,1967L,
+                                   1968L,1969L,1970L,1971L,1972L,1973L,
+                                   1974L,1975L,1976L,1977L,1978L,1979L,1980L,
+                                   1981L,1982L,1983L,1984L,1985L,1986L,
+                                   1987L,1988L,1989L,1990L,1991L,1992L,1993L,
+                                   1994L,1995L,1996L,1997L,1998L,1999L,
+                                   2000L,2001L,2002L,2003L,2004L,2005L,
+                                   2006L,2007L,2008L,2009L,2010L,2011L,2012L,
+                                   2013L,2014L,2015L,2016L,2017L,2018L,
+                                   2019L),
+  No..Reported.Pertussis.Cases = c(107473,
+                                   164191,165418,152003,202210,181411,
+                                   161799,197371,166914,172559,215343,179135,
+                                   265269,180518,147237,214652,227319,103188,
+                                   183866,222202,191383,191890,109873,
+                                   133792,109860,156517,74715,69479,120718,
+                                   68687,45030,37129,60886,62786,31732,28295,
+                                   32148,40005,14809,11468,17749,17135,
+                                   13005,6799,7717,9718,4810,3285,4249,
+                                   3036,3287,1759,2402,1738,1010,2177,2063,
+                                   1623,1730,1248,1895,2463,2276,3589,
+                                   4195,2823,3450,4157,4570,2719,4083,6586,
+                                   4617,5137,7796,6564,7405,7298,7867,
+                                   7580,9771,11647,25827,25616,15632,10454,
+                                   13278,16858,27550,18719,48277,28639,
+                                   32971,20762,17972,18975,15609,18617)
+)
+
+```
+
+```{r}
+head(cdc)
+```
+
+> **Q1. With the help of the R “addin” package datapasta assign the CDC pertussis case number data to a data frame called cdc and use ggplot to make a plot of cases numbers over time.**
+
+```{r, warning=FALSE}
+library(ggplot2)
+
+cdc_plot <- ggplot(cdc) + 
+  aes(cdc$Year, cdc$No..Reported.Pertussis.Cases) +
+  geom_point() +
+  geom_line() +
+  labs(main = "Pertussis Cases by Year (1922-2019",
+       x = "Year", y = "No. Reported Pertussis Cases")
+
+print(cdc_plot)
+```
+
+# 2. A tale of two vaccines (wP & aP)
+
+> **Q2. Using the ggplot geom_vline() function add lines to your previous plot for the 1946 introduction of the wP vaccine and the 1996 switch to aP vaccine (see example in the hint below). What do you notice?**
+
+```{r, warning=FALSE}
+cdc_plot + 
+  geom_vline(xintercept = 1946, color = "blue", linetype = 2) + 
+  geom_text(x = 1949, y = 259000, label = "wP", color = "blue") +
+  geom_vline(xintercept = 1996, color = "red", linetype = 2) +
+  geom_text(x = 1999, y = 259000, label = "aP", color = "red")
+```
+
+> **Q3. Describe what happened after the introduction of the aP vaccine? Do you have a possible explanation for the observed trend?**
+
+> **Ans: After the introduction of the aP vaccine in 1996, pertussis cases in the United States only stayed low for a short time and then increased once again. One of the possible explanations for this observed trend is the pertussis bacteria, Bordetella pertussis, underwent evolution pressure that helped them evolve new variants, which were able to escape from the new aP vaccine immunity.**
+
+# 3. Exploring CMI-PB data
+
+## The CMI-PB API returns JSON data
+
+```{r}
+# Allows us to read, write and process JSON data
+library(jsonlite)
+```
+
+```{r}
+subject <- read_json("https://www.cmi-pb.org/api/subject", 
+                     simplifyVector = TRUE) 
+```
+
+```{r}
+head(subject)
+```
+
+> **Q4. How may aP and wP infancy vaccinated subjects are in the dataset?**
+
+```{r}
+table(subject$infancy_vac)
+```
+
+> **Q5. How many Male and Female subjects/patients are in the dataset?**
+
+```{r}
+table(subject$biological_sex)
+```
+
+> **Q6. What is the breakdown of race and biological sex (e.g. number of Asian females, White males etc…)?**
+
+```{r}
+table(subject$race, subject$biological_sex)
+```
+
+## Side-Note: Working with dates
+
+```{r, message=FALSE}
+library(lubridate)
+```
+
+```{r}
+today()
+```
+
+> **Q7. Using this approach determine (i) the average age of wP individuals, (ii) the average age of aP individuals; and (iii) are they significantly different?**
+
+```{r}
+# Use today date to calculate age in days
+subject$age <- today() - ymd(subject$year_of_birth)
+```
+
+```{r, message=FALSE}
+library(dplyr)
+```
+
+```{r, message=FALSE}
+# The average age of aP individuals
+ap <- subject %>% filter(infancy_vac == "aP")
+ap_age <- round(summary(time_length(ap$age, "years")))
+print(ap_age)
+```
+
+```{r}
+# The average age of wP individuals
+wp <- subject %>% filter(infancy_vac == "wP")
+wp_age <- round(summary(time_length(wp$age, "years")))
+print(wp_age)
+```
+
+```{r}
+# Perform Student's t-test to see if they are significantly different
+t.test(ap_age, wp_age, paired = TRUE)
+```
+
+> **Ans: Since the p-value = 0.01481 < 0.05, the average age of aP individuals and the average age of wP individuals are significantly different**
+
+> **Q8. Determine the age of all individuals at time of boost?**
+
+```{r}
+int <- ymd(subject$date_of_boost) - ymd(subject$year_of_birth)
+age_at_boost <- round(time_length(int, "year"))
+head(age_at_boost)
+```
+
+> **Q9. With the help of a faceted boxplot (see below), do you think these two groups are significantly different?**
+
+```{r, message=FALSE}
+ggplot(subject) +
+  aes(time_length(age, "year"),
+      fill = as.factor(infancy_vac)) +
+  geom_histogram(show.legend = FALSE) +
+  facet_wrap(vars(infancy_vac), nrow = 2)
+```
+
+## Joining multiple tables
+
+```{r}
+# Complete the API URLs...
+
+specimen <- read_json("https://www.cmi-pb.org/api/specimen", simplifyVector = TRUE) 
+
+titer <- read_json("https://www.cmi-pb.org/api/ab_titer", simplifyVector = TRUE) 
+```
+
+```{r}
+head(specimen)
+```
+
+```{r}
+head(titer)
+```
+
+> **Q9. Complete the code to join 'specimen' and 'subject' tables to make a new merged data frame containing all specimen records along with their associated subject details:**
+
+```{r}
+meta <- inner_join(specimen, subject)
+dim(meta)
+```
+
+```{r}
+head(meta)
+```
+
+> **Q10. Now using the same procedure join 'meta' with 'titer' data so we can further analyze this data in terms of time of visit aP/wP, male/female etc.**
+
+```{r}
+abdata <- inner_join(titer, meta)
+dim(abdata)
+```
+
+```{r}
+head(abdata)
+```
+
+> **Q11. How many specimens (i.e. entries in abdata) do we have for each isotype?**
+
+```{r}
+table(abdata$isotype)
+```
+
+> **Q12. What do you notice about the number of visit 8 specimens compared to other visits?**
+
+```{r}
+table(abdata$visit)
+```
+
+> **Ans: The number of visit 8 specimens is much lower compared to other visits**
+
+# 4. Examine IgG1 Ab titer levels
+
+In 'abdata' dataset, filter() for IgG1 'isotype' and exclude the small number of visit 8 entries.
+
+```{r}
+ig1 <- abdata %>% filter(isotype == "IgG1", visit!=8)
+head(ig1)
+```
+
+> **Q13. Complete the following code to make a summary boxplot of Ab titer levels for all antigens:**
+
+```{r, warning=FALSE}
+ggplot(ig1) +
+  aes(ig1$MFI, ig1$antigen) +
+  geom_boxplot() + 
+  labs(x = "IgG1 Ab Titer Levels", y = "Antigens") +
+  facet_wrap(vars(visit), nrow = 2)
+```
+
+Examine differences between 'wP' and 'aP' by setting color and/or facet values of the plot to include infancy_vac status
+
+```{r, warning=FALSE}
+ggplot(ig1) +
+  aes(ig1$MFI, ig1$antigen, col=infancy_vac ) +
+  geom_boxplot(show.legend = FALSE) + 
+  labs(x = "IgG1 Ab Titer Levels", y = "Antigens") +
+  facet_wrap(vars(visit), nrow=2) +
+  theme_bw()
+```
+
+Another version of this plot adding infancy_vac to the faceting:
+
+```{r, warning=FALSE}
+ggplot(ig1) +
+  aes(ig1$MFI, ig1$antigen, col = infancy_vac ) +
+  geom_boxplot(show.legend = FALSE) +
+  labs(x = "IgG1 Ab Titer Levels", y = "Antigens") +
+  facet_wrap(vars(infancy_vac, visit), nrow = 2)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
